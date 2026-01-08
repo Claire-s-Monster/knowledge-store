@@ -3,7 +3,10 @@
 Provides HTTP endpoints for MCP protocol and convenience REST endpoints.
 """
 
+import dataclasses
 import json
+import uuid
+from datetime import datetime
 from typing import Any
 
 import structlog
@@ -18,8 +21,29 @@ from ..server import KnowledgeStoreServer
 
 logger = structlog.get_logger(__name__)
 
+# MCP Protocol version
+MCP_PROTOCOL_VERSION = "2024-11-05"
+
+# Simple in-memory MCP session storage
+_mcp_sessions: dict[str, dict[str, Any]] = {}
+
 # Global server instance
 _server: KnowledgeStoreServer | None = None
+
+
+class DatetimeJSONEncoder(json.JSONEncoder):
+    """JSON encoder that handles datetime and dataclass objects."""
+
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+            return dataclasses.asdict(obj)
+        if hasattr(obj, "model_dump"):  # Pydantic v2
+            return obj.model_dump()
+        if hasattr(obj, "dict"):  # Pydantic v1
+            return obj.dict()
+        return super().default(obj)
 
 
 def get_server() -> KnowledgeStoreServer:
@@ -46,25 +70,93 @@ async def handle_mcp(request: Request) -> Response:
         result: dict[str, Any] = {}
 
         if method == "tools/list":
-            # List the 3 meta-tools
-            tools = await server.server.list_tools()
+            # Return the 3 meta-tools
+            from mcp.types import Tool
+            tools = [
+                Tool(
+                    name="discover_tools",
+                    description="Get available tools with minimal context consumption",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "pattern": {"type": "string", "default": "", "description": "Filter pattern"}
+                        },
+                    },
+                ),
+                Tool(
+                    name="get_tool_spec",
+                    description="Get full specification for specific tool",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {"tool_name": {"type": "string"}},
+                        "required": ["tool_name"],
+                    },
+                ),
+                Tool(
+                    name="execute_tool",
+                    description="Execute tool with parameters",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "tool_name": {"type": "string"},
+                            "parameters": {"type": "object"},
+                        },
+                        "required": ["tool_name", "parameters"],
+                    },
+                ),
+            ]
             result = {"tools": [t.model_dump() for t in tools]}
 
         elif method == "tools/call":
             tool_name = params.get("name", "")
             arguments = params.get("arguments", {})
-            contents = await server.server.call_tool(tool_name, arguments)
-            result = {"content": [c.model_dump() for c in contents]}
+            # Call our handler methods directly
+            if tool_name == "discover_tools":
+                tool_result = server._discover_tools(arguments.get("pattern", ""))
+            elif tool_name == "get_tool_spec":
+                tool_result = server._get_tool_spec(arguments.get("tool_name", ""))
+            elif tool_name == "execute_tool":
+                tool_result = await server._execute_tool(
+                    arguments.get("tool_name", ""),
+                    arguments.get("parameters", {}),
+                )
+            else:
+                tool_result = {"error": f"Unknown tool: {tool_name}"}
+            result = {
+                "content": [
+                    {"type": "text", "text": json.dumps(tool_result, cls=DatetimeJSONEncoder)}
+                ]
+            }
 
         elif method == "initialize":
-            result = {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {"tools": {}},
-                "serverInfo": {
-                    "name": "knowledge-store",
-                    "version": "0.1.0",
-                },
-            }
+            new_session_id = str(uuid.uuid4())
+            _mcp_sessions[new_session_id] = {"created": True}
+            response = JSONResponse(
+                {
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "result": {
+                        "protocolVersion": MCP_PROTOCOL_VERSION,
+                        "capabilities": {"tools": {"listChanged": True}},
+                        "serverInfo": {
+                            "name": "knowledge-store",
+                            "version": "0.1.0",
+                        },
+                    },
+                }
+            )
+            response.headers["MCP-Session-Id"] = new_session_id
+            response.headers["MCP-Protocol-Version"] = MCP_PROTOCOL_VERSION
+            return response
+
+        elif method == "notifications/initialized":
+            result = {}
+
+        elif method in ("resources/list", "resources/templates/list"):
+            result = {"resources": []}
+
+        elif method == "prompts/list":
+            result = {"prompts": []}
 
         else:
             return JSONResponse(
