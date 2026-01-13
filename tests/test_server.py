@@ -46,7 +46,11 @@ class TestDiscoverTools:
         result = server._discover_tools("entry")
 
         assert result["total_count"] < 8
-        assert all("entry" in t["name"] for t in result["tools"])
+        # Pattern matches in either name or description
+        assert all(
+            "entry" in t["name"].lower() or "entry" in t["description"].lower()
+            for t in result["tools"]
+        )
 
 
 class TestGetToolSpec:
