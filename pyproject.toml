@@ -34,6 +34,7 @@ dev = [
     "mypy>=1.5",
     "ruff>=0.1",
     "pre-commit>=3.4",
+    "vulture>=2.10",
 ]
 
 [project.scripts]
@@ -51,7 +52,7 @@ channels = ["conda-forge"]
 platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
 
 [tool.pixi.dependencies]
-python = ">=3.11"
+python = "3.12.*"
 pip = "*"
 
 [tool.pixi.pypi-dependencies]
@@ -64,6 +65,7 @@ pytest-asyncio = ">=0.21"
 mypy = ">=1.5"
 ruff = ">=0.1"
 pre-commit = ">=3.4"
+vulture = ">=2.10"
 
 [tool.pixi.environments]
 default = { features = [], solve-group = "default" }
@@ -79,6 +81,7 @@ format = "ruff format src/ tests/"
 format-check = "ruff format src/ tests/ --check"
 typecheck = "mypy src/"
 quality = { depends-on = ["lint", "format-check", "typecheck"] }
+deadcode = "vulture src/ tests/ vulture_whitelist.py --min-confidence 60"
 lean-server = "python -m knowledge_store"
 
 [tool.ruff]

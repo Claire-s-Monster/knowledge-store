@@ -23,17 +23,40 @@ TOOLS: dict[str, dict[str, Any]] = {
         "parameters": {
             "type": "object",
             "properties": {
-                "problem_pattern": {"type": "string", "description": "What problem this solves"},
+                "problem_pattern": {
+                    "type": "string",
+                    "description": "What problem this solves",
+                },
                 "solution": {"type": "string", "description": "The solution/pattern"},
-                "code_example": {"type": "string", "description": "Optional code snippet"},
-                "tags": {"type": "array", "items": {"type": "string"}, "description": "Classification tags"},
+                "code_example": {
+                    "type": "string",
+                    "description": "Optional code snippet",
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Classification tags",
+                },
                 "pattern_type": {
                     "type": "string",
-                    "enum": ["bugfix", "best_practice", "optimization", "setup", "architecture"],
+                    "enum": [
+                        "bugfix",
+                        "best_practice",
+                        "optimization",
+                        "setup",
+                        "architecture",
+                    ],
                     "default": "bugfix",
                 },
-                "source_session": {"type": "string", "description": "Source session ID"},
-                "source_type": {"type": "string", "enum": ["session", "direct", "seeded"], "default": "session"},
+                "source_session": {
+                    "type": "string",
+                    "description": "Source session ID",
+                },
+                "source_type": {
+                    "type": "string",
+                    "enum": ["session", "direct", "seeded"],
+                    "default": "session",
+                },
             },
             "required": ["problem_pattern", "solution"],
         },
@@ -98,7 +121,11 @@ TOOLS: dict[str, dict[str, Any]] = {
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "Search query text"},
-                "limit": {"type": "integer", "default": 10, "description": "Max results"},
+                "limit": {
+                    "type": "integer",
+                    "default": 10,
+                    "description": "Max results",
+                },
                 "filters": {
                     "type": "object",
                     "description": "Metadata filters (status, tags, quality_score, etc.)",
@@ -107,7 +134,11 @@ TOOLS: dict[str, dict[str, Any]] = {
             "required": ["query"],
         },
         "examples": [
-            {"query": "pytest async fixture", "limit": 5, "filters": {"status": "active"}}
+            {
+                "query": "pytest async fixture",
+                "limit": 5,
+                "filters": {"status": "active"},
+            }
         ],
     },
     "find_similar": {
@@ -116,9 +147,20 @@ TOOLS: dict[str, dict[str, Any]] = {
         "parameters": {
             "type": "object",
             "properties": {
-                "entry_id": {"type": "string", "description": "Entry UUID to find similar entries for"},
-                "threshold": {"type": "number", "default": 0.85, "description": "Minimum similarity score"},
-                "limit": {"type": "integer", "default": 10, "description": "Max results"},
+                "entry_id": {
+                    "type": "string",
+                    "description": "Entry UUID to find similar entries for",
+                },
+                "threshold": {
+                    "type": "number",
+                    "default": 0.85,
+                    "description": "Minimum similarity score",
+                },
+                "limit": {
+                    "type": "integer",
+                    "default": 10,
+                    "description": "Max results",
+                },
             },
             "required": ["entry_id"],
         },
@@ -133,8 +175,16 @@ TOOLS: dict[str, dict[str, Any]] = {
             "type": "object",
             "properties": {
                 "filters": {"type": "object", "description": "Metadata filters"},
-                "limit": {"type": "integer", "default": 100, "description": "Max results"},
-                "offset": {"type": "integer", "default": 0, "description": "Pagination offset"},
+                "limit": {
+                    "type": "integer",
+                    "default": 100,
+                    "description": "Max results",
+                },
+                "offset": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Pagination offset",
+                },
             },
         },
         "examples": [{"filters": {"status": "canonical"}, "limit": 50}],
@@ -166,7 +216,12 @@ class KnowledgeStoreServer:
             return [
                 Tool(
                     name="discover_tools",
-                    description="Get available tools with minimal context consumption",
+                    description=(
+                        "Discover knowledge store tools for storing and retrieving learned patterns. "
+                        "USE WHEN: starting knowledge store work, finding available operations, "
+                        "exploring CRUD/search/analytics capabilities. "
+                        "[STEP 1 of 3] Call this first to see available tools."
+                    ),
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -180,23 +235,40 @@ class KnowledgeStoreServer:
                 ),
                 Tool(
                     name="get_tool_spec",
-                    description="Get full specification for specific tool including schema and examples",
+                    description=(
+                        "Get full specification for a knowledge store tool including schema and examples. "
+                        "USE WHEN: need parameter details for add_entry, search, find_similar, etc. "
+                        "[STEP 2 of 3] Call after discover_tools to get schema before execute_tool."
+                    ),
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "tool_name": {"type": "string", "description": "Name of tool to get specification for"}
+                            "tool_name": {
+                                "type": "string",
+                                "description": "Name of tool to get specification for",
+                            }
                         },
                         "required": ["tool_name"],
                     },
                 ),
                 Tool(
                     name="execute_tool",
-                    description="Execute tool with parameters using dynamic dispatch",
+                    description=(
+                        "Execute knowledge store operations: add/search/update entries, find duplicates, get stats. "
+                        "USE WHEN: storing learned patterns, searching knowledge base, deduplication checks. "
+                        "[STEP 3 of 3] Call after get_tool_spec with proper parameters."
+                    ),
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "tool_name": {"type": "string", "description": "Name of tool to execute"},
-                            "parameters": {"type": "object", "description": "Tool parameters"},
+                            "tool_name": {
+                                "type": "string",
+                                "description": "Name of tool to execute",
+                            },
+                            "parameters": {
+                                "type": "object",
+                                "description": "Tool parameters",
+                            },
                         },
                         "required": ["tool_name", "parameters"],
                     },
@@ -229,7 +301,10 @@ class KnowledgeStoreServer:
         """Get available tools with minimal context."""
         tools = []
         for name, spec in TOOLS.items():
-            if pattern.lower() in name.lower() or pattern.lower() in spec["description"].lower():
+            if (
+                pattern.lower() in name.lower()
+                or pattern.lower() in spec["description"].lower()
+            ):
                 tools.append(
                     ToolSummary(
                         name=name,

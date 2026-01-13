@@ -1,15 +1,14 @@
 """Tests for KnowledgeStore ChromaDB operations."""
 
-import pytest
-
-from knowledge_store.models import KnowledgeEntry
 from knowledge_store.store import KnowledgeStore
 
 
 class TestKnowledgeStoreAdd:
     """Tests for add_entry operation."""
 
-    def test_add_entry_success(self, knowledge_store: KnowledgeStore, sample_entry_data: dict) -> None:
+    def test_add_entry_success(
+        self, knowledge_store: KnowledgeStore, sample_entry_data: dict
+    ) -> None:
         """Test adding a new entry."""
         result = knowledge_store.add_entry(**sample_entry_data)
 
@@ -35,7 +34,9 @@ class TestKnowledgeStoreAdd:
 class TestKnowledgeStoreGet:
     """Tests for get_entry operation."""
 
-    def test_get_existing_entry(self, knowledge_store: KnowledgeStore, sample_entry_data: dict) -> None:
+    def test_get_existing_entry(
+        self, knowledge_store: KnowledgeStore, sample_entry_data: dict
+    ) -> None:
         """Test retrieving an existing entry."""
         add_result = knowledge_store.add_entry(**sample_entry_data)
         assert add_result.entry_id is not None
@@ -55,7 +56,9 @@ class TestKnowledgeStoreGet:
 class TestKnowledgeStoreUpdate:
     """Tests for update_entry operation."""
 
-    def test_update_allowed_fields(self, knowledge_store: KnowledgeStore, sample_entry_data: dict) -> None:
+    def test_update_allowed_fields(
+        self, knowledge_store: KnowledgeStore, sample_entry_data: dict
+    ) -> None:
         """Test updating allowed fields."""
         add_result = knowledge_store.add_entry(**sample_entry_data)
         assert add_result.entry_id is not None
@@ -70,7 +73,9 @@ class TestKnowledgeStoreUpdate:
         assert result.entry.quality_score == 0.95
         assert result.entry.status == "canonical"
 
-    def test_update_immutable_fields_rejected(self, knowledge_store: KnowledgeStore, sample_entry_data: dict) -> None:
+    def test_update_immutable_fields_rejected(
+        self, knowledge_store: KnowledgeStore, sample_entry_data: dict
+    ) -> None:
         """Test that immutable fields cannot be updated."""
         add_result = knowledge_store.add_entry(**sample_entry_data)
         assert add_result.entry_id is not None
@@ -92,7 +97,9 @@ class TestKnowledgeStoreUpdate:
 class TestKnowledgeStoreDelete:
     """Tests for delete_entry operation."""
 
-    def test_delete_existing_entry(self, knowledge_store: KnowledgeStore, sample_entry_data: dict) -> None:
+    def test_delete_existing_entry(
+        self, knowledge_store: KnowledgeStore, sample_entry_data: dict
+    ) -> None:
         """Test deleting an existing entry."""
         add_result = knowledge_store.add_entry(**sample_entry_data)
         assert add_result.entry_id is not None
@@ -128,7 +135,9 @@ class TestKnowledgeStoreSearch:
         assert len(results) > 0
         assert any("import" in r.entry.problem_pattern.lower() for r in results)
 
-    def test_search_with_filters(self, knowledge_store: KnowledgeStore, sample_entry_data: dict) -> None:
+    def test_search_with_filters(
+        self, knowledge_store: KnowledgeStore, sample_entry_data: dict
+    ) -> None:
         """Test search with metadata filters."""
         knowledge_store.add_entry(**sample_entry_data)
 
@@ -151,7 +160,8 @@ class TestKnowledgeStoreFindSimilar:
             solution="Check conftest.py location",
             tags=["pytest"],
         )
-        result2 = knowledge_store.add_entry(
+        # Add second entry to have something similar to find (result intentionally unused)
+        knowledge_store.add_entry(
             problem_pattern="pytest fixtures missing from conftest",
             solution="Verify conftest.py is in test directory",
             tags=["pytest"],
@@ -175,7 +185,9 @@ class TestKnowledgeStoreStats:
         assert stats.total_entries == 0
         assert stats.avg_quality_score == 0.0
 
-    def test_stats_with_entries(self, knowledge_store: KnowledgeStore, sample_entry_data: dict) -> None:
+    def test_stats_with_entries(
+        self, knowledge_store: KnowledgeStore, sample_entry_data: dict
+    ) -> None:
         """Test stats with entries."""
         knowledge_store.add_entry(**sample_entry_data)
         knowledge_store.add_entry(

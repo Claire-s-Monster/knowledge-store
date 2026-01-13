@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from knowledge_store.config import Settings, settings
+from knowledge_store.config import Settings
 from knowledge_store.store import KnowledgeStore
 
 
@@ -27,7 +27,9 @@ def test_settings(temp_chroma_dir: Path) -> Settings:
 
 
 @pytest.fixture
-def knowledge_store(test_settings: Settings, monkeypatch: pytest.MonkeyPatch) -> KnowledgeStore:
+def knowledge_store(
+    test_settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> KnowledgeStore:
     """Create a KnowledgeStore with test settings."""
     # Patch the global settings
     monkeypatch.setattr("knowledge_store.store.settings", test_settings)

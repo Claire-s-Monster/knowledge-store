@@ -70,22 +70,36 @@ async def handle_mcp(request: Request) -> Response:
         result: dict[str, Any] = {}
 
         if method == "tools/list":
-            # Return the 3 meta-tools
+            # Return the 3 meta-tools with LLM-friendly descriptions
             from mcp.types import Tool
+
             tools = [
                 Tool(
                     name="discover_tools",
-                    description="Get available tools with minimal context consumption",
+                    description=(
+                        "Discover knowledge store tools for storing and retrieving learned patterns. "
+                        "USE WHEN: starting knowledge store work, finding available operations, "
+                        "exploring CRUD/search/analytics capabilities. "
+                        "[STEP 1 of 3] Call this first to see available tools."
+                    ),
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "pattern": {"type": "string", "default": "", "description": "Filter pattern"}
+                            "pattern": {
+                                "type": "string",
+                                "default": "",
+                                "description": "Filter pattern",
+                            }
                         },
                     },
                 ),
                 Tool(
                     name="get_tool_spec",
-                    description="Get full specification for specific tool",
+                    description=(
+                        "Get full specification for a knowledge store tool including schema and examples. "
+                        "USE WHEN: need parameter details for add_entry, search, find_similar, etc. "
+                        "[STEP 2 of 3] Call after discover_tools to get schema before execute_tool."
+                    ),
                     inputSchema={
                         "type": "object",
                         "properties": {"tool_name": {"type": "string"}},
@@ -94,7 +108,11 @@ async def handle_mcp(request: Request) -> Response:
                 ),
                 Tool(
                     name="execute_tool",
-                    description="Execute tool with parameters",
+                    description=(
+                        "Execute knowledge store operations: add/search/update entries, find duplicates, get stats. "
+                        "USE WHEN: storing learned patterns, searching knowledge base, deduplication checks. "
+                        "[STEP 3 of 3] Call after get_tool_spec with proper parameters."
+                    ),
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -124,7 +142,10 @@ async def handle_mcp(request: Request) -> Response:
                 tool_result = {"error": f"Unknown tool: {tool_name}"}
             result = {
                 "content": [
-                    {"type": "text", "text": json.dumps(tool_result, cls=DatetimeJSONEncoder)}
+                    {
+                        "type": "text",
+                        "text": json.dumps(tool_result, cls=DatetimeJSONEncoder),
+                    }
                 ]
             }
 
@@ -178,13 +199,21 @@ async def handle_mcp(request: Request) -> Response:
 
     except json.JSONDecodeError:
         return JSONResponse(
-            {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Parse error"}},
+            {
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {"code": -32700, "message": "Parse error"},
+            },
             status_code=400,
         )
     except Exception as e:
         logger.error("mcp_error", error=str(e))
         return JSONResponse(
-            {"jsonrpc": "2.0", "id": None, "error": {"code": -32603, "message": str(e)}},
+            {
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {"code": -32603, "message": str(e)},
+            },
             status_code=500,
         )
 

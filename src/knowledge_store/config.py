@@ -25,7 +25,9 @@ class Settings(BaseSettings):
     chroma_persist_dir: Path = Path("./data/chromadb")
     chroma_collection_name: str = "knowledge_patterns"
 
-    # Embedding (ChromaDB default: all-MiniLM-L6-v2)
+    # Embedding model name (reserved for future custom embedding support)
+    # Currently ChromaDB uses all-MiniLM-L6-v2 by default
+    # TODO: Implement custom embedding function when needed
     embedding_model: str = "all-MiniLM-L6-v2"
 
     # Logging

@@ -21,7 +21,9 @@ class KnowledgeEntry(BaseModel):
     code_example: str | None = Field(default=None, description="Optional code snippet")
 
     # Classification
-    tags: list[str] = Field(default_factory=list, description="e.g., ['python', 'pytest', 'async']")
+    tags: list[str] = Field(
+        default_factory=list, description="e.g., ['python', 'pytest', 'async']"
+    )
     pattern_type: Literal[
         "bugfix",
         "best_practice",
@@ -31,10 +33,14 @@ class KnowledgeEntry(BaseModel):
     ] = Field(default="bugfix", description="Type of pattern")
 
     # Quality metrics (updated by curator)
-    times_applied: int = Field(default=0, description="Number of times this pattern was applied")
+    times_applied: int = Field(
+        default=0, description="Number of times this pattern was applied"
+    )
     success_count: int = Field(default=0, description="Successful applications")
     failure_count: int = Field(default=0, description="Failed applications")
-    quality_score: float = Field(default=0.5, ge=0.0, le=1.0, description="Quality score 0.0 to 1.0")
+    quality_score: float = Field(
+        default=0.5, ge=0.0, le=1.0, description="Quality score 0.0 to 1.0"
+    )
 
     # Lifecycle
     status: Literal[
@@ -43,10 +49,14 @@ class KnowledgeEntry(BaseModel):
         "archived",
         "superseded",
     ] = Field(default="active", description="Entry status")
-    superseded_by: str | None = Field(default=None, description="Entry ID if superseded")
+    superseded_by: str | None = Field(
+        default=None, description="Entry ID if superseded"
+    )
 
     # Provenance
-    source_session: str | None = Field(default=None, description="session-intelligence session ID")
+    source_session: str | None = Field(
+        default=None, description="session-intelligence session ID"
+    )
     source_type: Literal["session", "direct", "seeded"] = Field(
         default="session", description="How entry was created"
     )
@@ -77,7 +87,9 @@ class KnowledgeEntry(BaseModel):
             "source_type": self.source_type,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
-            "last_applied_at": self.last_applied_at.isoformat() if self.last_applied_at else "",
+            "last_applied_at": self.last_applied_at.isoformat()
+            if self.last_applied_at
+            else "",
         }
 
 
@@ -85,7 +97,9 @@ class SearchResult(BaseModel):
     """Result from semantic search."""
 
     entry: KnowledgeEntry
-    similarity_score: float = Field(ge=0.0, le=1.0, description="Similarity score 0.0 to 1.0")
+    similarity_score: float = Field(
+        ge=0.0, le=1.0, description="Similarity score 0.0 to 1.0"
+    )
 
 
 class EntryResult(BaseModel):

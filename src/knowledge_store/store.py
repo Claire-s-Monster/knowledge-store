@@ -64,9 +64,9 @@ class KnowledgeStore:
             solution=solution,
             code_example=code_example,
             tags=tags or [],
-            pattern_type=pattern_type,  # type: ignore[arg-type]
+            pattern_type=pattern_type,
             source_session=source_session,
-            source_type=source_type,  # type: ignore[arg-type]
+            source_type=source_type,
             created_at=now,
             updated_at=now,
         )
@@ -97,7 +97,9 @@ class KnowledgeStore:
                 return None
 
             metadata = result["metadatas"][0] if result["metadatas"] else {}
-            return self._metadata_to_entry(metadata, result["documents"][0] if result["documents"] else "")
+            return self._metadata_to_entry(
+                metadata, result["documents"][0] if result["documents"] else ""
+            )
 
         except Exception as e:
             logger.error("entry_get_failed", entry_id=entry_id, error=str(e))
@@ -106,7 +108,15 @@ class KnowledgeStore:
     def update_entry(self, entry_id: str, updates: dict[str, Any]) -> EntryResult:
         """Update an existing entry (partial update)."""
         # Immutable fields that cannot be updated
-        immutable = {"id", "problem_pattern", "solution", "code_example", "created_at", "source_session", "source_type"}
+        immutable = {
+            "id",
+            "problem_pattern",
+            "solution",
+            "code_example",
+            "created_at",
+            "source_session",
+            "source_type",
+        }
         invalid_keys = set(updates.keys()) & immutable
         if invalid_keys:
             return EntryResult(
@@ -131,7 +141,9 @@ class KnowledgeStore:
                 metadatas=[updated_entry.to_metadata()],
             )
 
-            logger.info("entry_updated", entry_id=entry_id, updates=list(updates.keys()))
+            logger.info(
+                "entry_updated", entry_id=entry_id, updates=list(updates.keys())
+            )
             return EntryResult(success=True, entry_id=entry_id, entry=updated_entry)
 
         except Exception as e:
@@ -151,10 +163,22 @@ class KnowledgeStore:
     def search(
         self,
         query: str,
-        limit: int = 10,
+        limit: int | None = None,
         filters: dict[str, Any] | None = None,
     ) -> list[SearchResult]:
-        """Semantic search for entries."""
+        """Semantic search for entries.
+
+        Args:
+            query: Search query text.
+            limit: Max results to return. Defaults to settings.default_search_limit.
+            filters: Optional filters to apply.
+
+        Returns:
+            List of SearchResult with matching entries and similarity scores.
+        """
+        if limit is None:
+            limit = settings.default_search_limit
+
         where_clause = self._build_where_clause(filters) if filters else None
 
         try:
@@ -167,18 +191,28 @@ class KnowledgeStore:
 
             search_results = []
             if results["ids"] and results["ids"][0]:
-                for i, entry_id in enumerate(results["ids"][0]):
-                    metadata = results["metadatas"][0][i] if results["metadatas"] else {}
-                    document = results["documents"][0][i] if results["documents"] else ""
-                    distance = results["distances"][0][i] if results["distances"] else 1.0
+                for i, _entry_id in enumerate(results["ids"][0]):
+                    metadata = (
+                        results["metadatas"][0][i] if results["metadatas"] else {}
+                    )
+                    document = (
+                        results["documents"][0][i] if results["documents"] else ""
+                    )
+                    distance = (
+                        results["distances"][0][i] if results["distances"] else 1.0
+                    )
 
                     entry = self._metadata_to_entry(metadata, document)
                     if entry:
                         # Convert cosine distance to similarity (1 - distance)
                         similarity = max(0.0, min(1.0, 1.0 - distance))
-                        search_results.append(SearchResult(entry=entry, similarity_score=similarity))
+                        search_results.append(
+                            SearchResult(entry=entry, similarity_score=similarity)
+                        )
 
-            logger.info("search_completed", query_length=len(query), results=len(search_results))
+            logger.info(
+                "search_completed", query_length=len(query), results=len(search_results)
+            )
             return search_results
 
         except Exception as e:
@@ -188,10 +222,24 @@ class KnowledgeStore:
     def find_similar(
         self,
         entry_id: str,
-        threshold: float = 0.85,
-        limit: int = 10,
+        threshold: float | None = None,
+        limit: int | None = None,
     ) -> list[SearchResult]:
-        """Find entries similar to the specified entry."""
+        """Find entries similar to the specified entry.
+
+        Args:
+            entry_id: ID of the source entry to find similar entries for.
+            threshold: Minimum similarity score. Defaults to settings.default_similarity_threshold.
+            limit: Max results to return. Defaults to settings.default_search_limit.
+
+        Returns:
+            List of SearchResult with similar entries (excludes the source entry).
+        """
+        if threshold is None:
+            threshold = settings.default_similarity_threshold
+        if limit is None:
+            limit = settings.default_search_limit
+
         entry = self.get_entry(entry_id)
         if not entry:
             return []
@@ -201,7 +249,8 @@ class KnowledgeStore:
 
         # Filter out the source entry and apply threshold
         return [
-            r for r in results
+            r
+            for r in results
             if r.entry.id != entry_id and r.similarity_score >= threshold
         ]
 
@@ -224,7 +273,7 @@ class KnowledgeStore:
 
             entries = []
             if results["ids"]:
-                for i, entry_id in enumerate(results["ids"]):
+                for i, _entry_id in enumerate(results["ids"]):
                     if i < offset:
                         continue
                     metadata = results["metadatas"][i] if results["metadatas"] else {}
@@ -256,7 +305,9 @@ class KnowledgeStore:
                 for tag in entry.tags:
                     tag_counts[tag] += 1
 
-            avg_quality = sum(quality_scores) / len(quality_scores) if quality_scores else 0.0
+            avg_quality = (
+                sum(quality_scores) / len(quality_scores) if quality_scores else 0.0
+            )
 
             return StoreStats(
                 total_entries=len(all_entries),
@@ -298,7 +349,9 @@ class KnowledgeStore:
             return conditions[0]
         return {"$and": conditions}
 
-    def _metadata_to_entry(self, metadata: dict, document: str) -> KnowledgeEntry | None:
+    def _metadata_to_entry(
+        self, metadata: dict, document: str
+    ) -> KnowledgeEntry | None:
         """Convert ChromaDB metadata back to KnowledgeEntry."""
         try:
             # Parse document back into components
@@ -312,10 +365,16 @@ class KnowledgeStore:
             tags = [t.strip() for t in tags_str.split(",") if t.strip()]
 
             # Parse datetime fields
-            created_at = datetime.fromisoformat(metadata.get("created_at", datetime.utcnow().isoformat()))
-            updated_at = datetime.fromisoformat(metadata.get("updated_at", datetime.utcnow().isoformat()))
+            created_at = datetime.fromisoformat(
+                metadata.get("created_at", datetime.utcnow().isoformat())
+            )
+            updated_at = datetime.fromisoformat(
+                metadata.get("updated_at", datetime.utcnow().isoformat())
+            )
             last_applied_str = metadata.get("last_applied_at", "")
-            last_applied_at = datetime.fromisoformat(last_applied_str) if last_applied_str else None
+            last_applied_at = (
+                datetime.fromisoformat(last_applied_str) if last_applied_str else None
+            )
 
             return KnowledgeEntry(
                 id=metadata.get("id", ""),
