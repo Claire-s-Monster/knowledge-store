@@ -27,7 +27,7 @@ ENV/
 
 # Pixi
 .pixi/
-pixi.lock
+# pixi.lock is tracked for CI reproducibility
 
 # Testing
 .pytest_cache/
