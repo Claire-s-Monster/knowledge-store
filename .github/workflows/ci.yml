@@ -1,88 +1,66 @@
-name: CI
+name: CI Framework
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
 
 on:
   push:
     branches: [main, development]
   pull_request:
     branches: [development]
+  workflow_dispatch:
 
 jobs:
-  detect-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      src: ${{ steps.filter.outputs.src }}
-      tests: ${{ steps.filter.outputs.tests }}
-      config: ${{ steps.filter.outputs.config }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            src:
-              - 'src/**'
-            tests:
-              - 'tests/**'
-            config:
-              - 'pyproject.toml'
-              - 'pixi.toml'
-              - 'pixi.lock'
+  change-detection:
+    uses: Claire-s-Monster/ci-framework/.github/workflows/change-detection.yml@v1.0.0
+    secrets: inherit
 
-  hygiene:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.src == 'true' || needs.detect-changes.outputs.tests == 'true' || needs.detect-changes.outputs.config == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pavelzw/setup-pixi@v2
-        with:
-          environments: dev
-      - name: Check code formatting
-        run: pixi run -e dev format-check
-      - name: Lint code
-        run: pixi run -e dev lint
+  quality-gates:
+    needs: change-detection
+    if: needs.change-detection.outputs.skip-tests != 'true'
+    uses: Claire-s-Monster/ci-framework/.github/workflows/quality-gates.yml@v1.0.0
+    with:
+      tier: 'essential'
+    secrets: inherit
 
-  quality:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.src == 'true' || needs.detect-changes.outputs.tests == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pavelzw/setup-pixi@v2
-        with:
-          environments: dev
-      - name: Type check
-        run: pixi run -e dev typecheck
+  security:
+    needs: change-detection
+    if: needs.change-detection.outputs.skip-security != 'true'
+    uses: Claire-s-Monster/ci-framework/.github/workflows/security-scan.yml@v1.0.0
+    with:
+      security-level: 'medium'
+    secrets: inherit
 
-  test:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.src == 'true' || needs.detect-changes.outputs.tests == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pavelzw/setup-pixi@v2
-        with:
-          environments: dev
-      - name: Run tests with coverage
-        run: pixi run -e dev test-cov
+  cleanup:
+    uses: Claire-s-Monster/ci-framework/.github/workflows/cleanup-dev-files.yml@v1.0.0
+    secrets: inherit
 
   ci-success:
-    needs: [hygiene, quality, test]
+    needs: [change-detection, quality-gates, security, cleanup]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs status
         run: |
-          # Jobs can be success (ran and passed) or skipped (no relevant changes detected)
-          # Both are acceptable outcomes
-          hygiene="${{ needs.hygiene.result }}"
-          quality="${{ needs.quality.result }}"
-          test="${{ needs.test.result }}"
+          # Jobs can be success, skipped (conditional), or not run
+          # All are acceptable unless explicitly failed
+          detection="${{ needs.change-detection.result }}"
+          quality="${{ needs.quality-gates.result }}"
+          security="${{ needs.security.result }}"
+          cleanup="${{ needs.cleanup.result }}"
 
-          if [[ "$hygiene" != "success" && "$hygiene" != "skipped" ]] || \
-             [[ "$quality" != "success" && "$quality" != "skipped" ]] || \
-             [[ "$test" != "success" && "$test" != "skipped" ]]; then
-            echo "One or more jobs failed: hygiene=$hygiene, quality=$quality, test=$test"
+          failed=false
+          for job in "$detection" "$quality" "$security" "$cleanup"; do
+            if [[ "$job" == "failure" || "$job" == "cancelled" ]]; then
+              failed=true
+              break
+            fi
+          done
+
+          if $failed; then
+            echo "One or more jobs failed: detection=$detection, quality=$quality, security=$security, cleanup=$cleanup"
             exit 1
           fi
-          echo "All jobs passed or skipped (no changes): hygiene=$hygiene, quality=$quality, test=$test"
+          echo "All jobs passed: detection=$detection, quality=$quality, security=$security, cleanup=$cleanup"
