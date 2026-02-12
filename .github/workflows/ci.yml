@@ -1,9 +1,8 @@
-name: CI Framework
+name: CI
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
-  issues: write
 
 on:
   push:
@@ -13,54 +12,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  change-detection:
-    uses: Claire-s-Monster/ci-framework/.github/workflows/change-detection.yml@v1.0.0
-    secrets: inherit
-
-  quality-gates:
-    needs: change-detection
-    if: needs.change-detection.outputs.skip-tests != 'true'
-    uses: Claire-s-Monster/ci-framework/.github/workflows/quality-gates.yml@v1.0.0
+  ci:
+    uses: Claire-s-Monster/ci-framework/.github/workflows/reusable-ci.yml@v2.3.0
     with:
-      tier: 'essential'
+      pixi-environment: 'dev'
+      python-versions: '["3.12"]'
+      os-matrix: '["ubuntu-latest"]'
+      enable-performance: false
+      enable-release: false
+      enable-hygiene-check: true
     secrets: inherit
-
-  security:
-    needs: change-detection
-    if: needs.change-detection.outputs.skip-security != 'true'
-    uses: Claire-s-Monster/ci-framework/.github/workflows/security-scan.yml@v1.0.0
-    with:
-      security-level: 'medium'
-    secrets: inherit
-
-  cleanup:
-    uses: Claire-s-Monster/ci-framework/.github/workflows/cleanup-dev-files.yml@v1.0.0
-    secrets: inherit
-
-  ci-success:
-    needs: [change-detection, quality-gates, security, cleanup]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check all jobs status
-        run: |
-          # Jobs can be success, skipped (conditional), or not run
-          # All are acceptable unless explicitly failed
-          detection="${{ needs.change-detection.result }}"
-          quality="${{ needs.quality-gates.result }}"
-          security="${{ needs.security.result }}"
-          cleanup="${{ needs.cleanup.result }}"
-
-          failed=false
-          for job in "$detection" "$quality" "$security" "$cleanup"; do
-            if [[ "$job" == "failure" || "$job" == "cancelled" ]]; then
-              failed=true
-              break
-            fi
-          done
-
-          if $failed; then
-            echo "One or more jobs failed: detection=$detection, quality=$quality, security=$security, cleanup=$cleanup"
-            exit 1
-          fi
-          echo "All jobs passed: detection=$detection, quality=$quality, security=$security, cleanup=$cleanup"
