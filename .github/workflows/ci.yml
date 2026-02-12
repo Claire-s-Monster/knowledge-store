@@ -73,10 +73,16 @@ jobs:
     steps:
       - name: Check all jobs status
         run: |
-          if [[ "${{ needs.hygiene.result }}" != "success" ]] || \
-             [[ "${{ needs.quality.result }}" != "success" ]] || \
-             [[ "${{ needs.test.result }}" != "success" ]]; then
-            echo "One or more jobs failed"
+          # Jobs can be success (ran and passed) or skipped (no relevant changes detected)
+          # Both are acceptable outcomes
+          hygiene="${{ needs.hygiene.result }}"
+          quality="${{ needs.quality.result }}"
+          test="${{ needs.test.result }}"
+
+          if [[ "$hygiene" != "success" && "$hygiene" != "skipped" ]] || \
+             [[ "$quality" != "success" && "$quality" != "skipped" ]] || \
+             [[ "$test" != "success" && "$test" != "skipped" ]]; then
+            echo "One or more jobs failed: hygiene=$hygiene, quality=$quality, test=$test"
             exit 1
           fi
-          echo "All jobs passed"
+          echo "All jobs passed or skipped (no changes): hygiene=$hygiene, quality=$quality, test=$test"
