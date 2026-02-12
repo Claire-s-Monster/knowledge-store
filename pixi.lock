@@ -2310,7 +2310,7 @@ packages:
 - pypi: ./
   name: knowledge-store
   version: 0.1.0
-  sha256: d66dc9e9d0f056af4f5983fa3aec7c87e90b3cac767ce1ebb84c9ff3da239903
+  sha256: e8d1a9d18011c23dce0f477106ac0f48683056b5e2f7a65566d41a9ca2930a74
   requires_dist:
   - mcp>=1.0.0
   - chromadb>=0.4.0
