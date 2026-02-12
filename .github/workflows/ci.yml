@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+    branches: [main]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      src: ${{ steps.filter.outputs.src }}
+      tests: ${{ steps.filter.outputs.tests }}
+      config: ${{ steps.filter.outputs.config }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            src:
+              - 'src/**'
+            tests:
+              - 'tests/**'
+            config:
+              - 'pyproject.toml'
+              - 'pixi.toml'
+              - 'pixi.lock'
+
+  hygiene:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.src == 'true' || needs.detect-changes.outputs.tests == 'true' || needs.detect-changes.outputs.config == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pavelzw/setup-pixi@v2
+        with:
+          environments: dev
+      - name: Check code formatting
+        run: pixi run -e dev format-check
+      - name: Lint code
+        run: pixi run -e dev lint
+
+  quality:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.src == 'true' || needs.detect-changes.outputs.tests == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pavelzw/setup-pixi@v2
+        with:
+          environments: dev
+      - name: Type check
+        run: pixi run -e dev typecheck
+
+  test:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.src == 'true' || needs.detect-changes.outputs.tests == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pavelzw/setup-pixi@v2
+        with:
+          environments: dev
+      - name: Run tests with coverage
+        run: pixi run -e dev test-cov
+
+  ci-success:
+    needs: [hygiene, quality, test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all jobs status
+        run: |
+          if [[ "${{ needs.hygiene.result }}" != "success" ]] || \
+             [[ "${{ needs.quality.result }}" != "success" ]] || \
+             [[ "${{ needs.test.result }}" != "success" ]]; then
+            echo "One or more jobs failed"
+            exit 1
+          fi
+          echo "All jobs passed"
