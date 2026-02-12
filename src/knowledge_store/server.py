@@ -210,7 +210,7 @@ class KnowledgeStoreServer:
     def _register_handlers(self) -> None:
         """Register MCP handlers."""
 
-        @self.server.list_tools()
+        @self.server.list_tools()  # type: ignore[no-untyped-call, untyped-decorator]
         async def list_tools() -> list[Tool]:
             """List the 3 meta-tools."""
             return [
@@ -275,8 +275,8 @@ class KnowledgeStoreServer:
                 ),
             ]
 
-        @self.server.call_tool()
-        async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+        @self.server.call_tool()  # type: ignore[untyped-decorator]
+        async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             """Handle tool calls."""
             try:
                 if name == "discover_tools":
@@ -333,7 +333,9 @@ class KnowledgeStoreServer:
             examples=spec.get("examples", []),
         ).model_dump()
 
-    async def _execute_tool(self, tool_name: str, parameters: dict) -> dict[str, Any]:
+    async def _execute_tool(
+        self, tool_name: str, parameters: dict[str, Any]
+    ) -> dict[str, Any]:
         """Execute a tool with parameters."""
         if tool_name not in TOOLS:
             return {"error": f"Unknown tool: {tool_name}"}

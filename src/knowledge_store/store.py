@@ -5,6 +5,7 @@ Handles all interactions with ChromaDB for knowledge entry storage and retrieval
 
 import uuid
 from collections import Counter
+from collections.abc import Mapping
 from datetime import datetime
 from typing import Any
 
@@ -350,7 +351,7 @@ class KnowledgeStore:
         return {"$and": conditions}
 
     def _metadata_to_entry(
-        self, metadata: dict, document: str
+        self, metadata: Mapping[str, Any], document: str
     ) -> KnowledgeEntry | None:
         """Convert ChromaDB metadata back to KnowledgeEntry."""
         try:

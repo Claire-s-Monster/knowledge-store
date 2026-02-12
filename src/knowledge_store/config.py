@@ -15,6 +15,7 @@ class Settings(BaseSettings):
         env_prefix="KNOWLEDGE_STORE_",
         env_file=".env",
         env_file_encoding="utf-8",
+        extra="ignore",  # Ignore unknown env vars
     )
 
     # Server

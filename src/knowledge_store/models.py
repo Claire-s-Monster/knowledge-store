@@ -71,7 +71,7 @@ class KnowledgeEntry(BaseModel):
             parts.append(self.code_example)
         return "\n\n".join(parts)
 
-    def to_metadata(self) -> dict:
+    def to_metadata(self) -> dict[str, str | int | float | None]:
         """Extract metadata for ChromaDB storage."""
         return {
             "id": self.id,
@@ -135,5 +135,5 @@ class ToolSpec(BaseModel):
     name: str
     description: str
     category: str
-    parameters: dict
-    examples: list[dict] = Field(default_factory=list)
+    parameters: dict[str, object]
+    examples: list[dict[str, object]] = Field(default_factory=list)
