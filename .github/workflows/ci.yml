@@ -1,10 +1,5 @@
 name: CI
 
-permissions:
-  contents: write
-  pull-requests: write
-  id-token: write
-
 on:
   push:
     branches: [main, development]
@@ -13,13 +8,81 @@ on:
   workflow_dispatch:
 
 jobs:
-  ci:
-    uses: Claire-s-Monster/ci-framework/.github/workflows/reusable-ci.yml@v2.3.0
-    with:
-      pixi-environment: 'dev'
-      python-versions: '["3.12"]'
-      os-matrix: '["ubuntu-latest"]'
-      enable-performance: false
-      enable-release: false
-      enable-hygiene-check: true
-    secrets: inherit
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      src: ${{ steps.filter.outputs.src }}
+      tests: ${{ steps.filter.outputs.tests }}
+      config: ${{ steps.filter.outputs.config }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            src:
+              - 'src/**'
+            tests:
+              - 'tests/**'
+            config:
+              - 'pyproject.toml'
+              - 'pixi.lock'
+
+  quality:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.src == 'true' || needs.detect-changes.outputs.tests == 'true' || needs.detect-changes.outputs.config == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.8
+        with:
+          environments: dev
+          cache: true
+      - name: Run quality checks
+        run: pixi run -e dev quality
+
+  security:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.src == 'true' || needs.detect-changes.outputs.config == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.8
+        with:
+          environments: dev
+          cache: true
+      - name: Run security scan
+        run: pixi run -e dev security
+
+  test:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.src == 'true' || needs.detect-changes.outputs.tests == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.8
+        with:
+          environments: dev
+          cache: true
+      - name: Run tests with coverage
+        run: pixi run -e dev test-cov
+
+  ci-success:
+    needs: [detect-changes, quality, security, test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all jobs status
+        run: |
+          quality="${{ needs.quality.result }}"
+          security="${{ needs.security.result }}"
+          test="${{ needs.test.result }}"
+
+          # Accept success or skipped (no changes detected)
+          for job in "$quality" "$security" "$test"; do
+            if [[ "$job" == "failure" || "$job" == "cancelled" ]]; then
+              echo "Job failed: quality=$quality, security=$security, test=$test"
+              exit 1
+            fi
+          done
+          echo "All jobs passed: quality=$quality, security=$security, test=$test"
