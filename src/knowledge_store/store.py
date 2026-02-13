@@ -11,6 +11,7 @@ from typing import Any
 
 import chromadb
 import structlog
+from chromadb.api.types import IncludeEnum
 from chromadb.config import Settings as ChromaSettings
 
 from .config import settings
@@ -76,7 +77,7 @@ class KnowledgeStore:
             self._collection.add(
                 ids=[entry_id],
                 documents=[entry.to_document()],
-                metadatas=[entry.to_metadata()],
+                metadatas=[entry.to_metadata()],  # type: ignore[list-item]
             )
 
             logger.info("entry_added", entry_id=entry_id, tags=tags)
@@ -91,7 +92,7 @@ class KnowledgeStore:
         try:
             result = self._collection.get(
                 ids=[entry_id],
-                include=["documents", "metadatas"],
+                include=[IncludeEnum.documents, IncludeEnum.metadatas],
             )
 
             if not result["ids"]:
@@ -139,7 +140,7 @@ class KnowledgeStore:
 
             self._collection.update(
                 ids=[entry_id],
-                metadatas=[updated_entry.to_metadata()],
+                metadatas=[updated_entry.to_metadata()],  # type: ignore[list-item]
             )
 
             logger.info(
@@ -187,7 +188,7 @@ class KnowledgeStore:
                 query_texts=[query],
                 n_results=limit,
                 where=where_clause,
-                include=["documents", "metadatas", "distances"],
+                include=[IncludeEnum.documents, IncludeEnum.metadatas, IncludeEnum.distances],
             )
 
             search_results = []
@@ -269,7 +270,7 @@ class KnowledgeStore:
             results = self._collection.get(
                 where=where_clause,
                 limit=limit + offset,
-                include=["documents", "metadatas"],
+                include=[IncludeEnum.documents, IncludeEnum.metadatas],
             )
 
             entries = []
