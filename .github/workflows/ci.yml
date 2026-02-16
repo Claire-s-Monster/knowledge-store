@@ -14,7 +14,7 @@ on:
 
 jobs:
   ci:
-    uses: Claire-s-Monster/ci-framework/.github/workflows/reusable-ci.yml@v2.3.0
+    uses: Claire-s-Monster/ci-framework/.github/workflows/reusable-ci.yml@v2.4.1
     with:
       pixi-environment: 'quality'
       python-versions: '["3.12"]'

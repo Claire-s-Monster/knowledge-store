@@ -64,6 +64,14 @@ exclude = [
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
 
+[tool.pixi.tasks]
+# Default tasks available in all environments
+test = { cmd = "pytest tests/ -v", depends-on = [] }
+lint = "ruff check src/ tests/"
+format = "ruff format src/ tests/"
+typecheck = "mypy src/"
+serve = "python -m knowledge_store"
+
 [tool.pixi.dependencies]
 python = "3.12.*"
 # Core runtime dependencies (conda packages)
@@ -140,7 +148,7 @@ build = "python -m build"
 # Environments (ci-framework compatible)
 # -----------------------------------------------------------------------------
 [tool.pixi.environments]
-default = { features = [], solve-group = "default" }
+default = { features = ["quality"], solve-group = "default" }
 dev = { features = ["quality", "dev"], solve-group = "default" }
 quality = { features = ["quality"], solve-group = "default" }
 quality-extended = { features = ["quality", "quality-extended"], solve-group = "default" }
