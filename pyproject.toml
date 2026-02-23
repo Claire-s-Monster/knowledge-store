@@ -70,7 +70,7 @@ test = { cmd = "pytest tests/ -v", depends-on = [] }
 lint = "ruff check src/ tests/"
 format = "ruff format src/ tests/"
 typecheck = "mypy src/"
-serve = "python -m knowledge_store"
+serve = { cmd = "python -m knowledge_store", env = { PYTHONPATH = "src" } }
 
 [tool.pixi.dependencies]
 python = "3.12.*"
@@ -129,8 +129,6 @@ pre-commit = ">=3.4"
 vulture = ">=2.10"
 
 [tool.pixi.feature.dev.tasks]
-serve = "python -m knowledge_store"
-lean-server = "python -m knowledge_store"
 deadcode = "vulture src/ tests/ --min-confidence 60"
 
 # -----------------------------------------------------------------------------

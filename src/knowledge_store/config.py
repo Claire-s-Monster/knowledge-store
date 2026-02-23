@@ -3,9 +3,16 @@
 Environment-based configuration using pydantic-settings.
 """
 
+import os
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _default_data_dir() -> Path:
+    """Get XDG-compliant default data directory."""
+    xdg_data = os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
+    return Path(xdg_data) / "knowledge-store" / "chromadb"
 
 
 class Settings(BaseSettings):
@@ -23,7 +30,7 @@ class Settings(BaseSettings):
     port: int = 4004
 
     # ChromaDB
-    chroma_persist_dir: Path = Path("./data/chromadb")
+    chroma_persist_dir: Path = _default_data_dir()
     chroma_collection_name: str = "knowledge_patterns"
 
     # Embedding model name (reserved for future custom embedding support)
