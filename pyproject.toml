@@ -66,7 +66,7 @@ platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
 
 [tool.pixi.tasks]
 # Default tasks available in all environments
-test = { cmd = "pytest tests/ -v", depends-on = [] }
+test = { cmd = "pytest tests/ -v", env = { PYTHONPATH = "src" } }
 lint = "ruff check src/ tests/"
 format = "ruff format src/ tests/"
 typecheck = "mypy src/"
@@ -104,8 +104,8 @@ lint-fix = "ruff check src/ tests/ --fix && ruff format src/ tests/"
 format = "ruff format src/ tests/"
 format-check = "ruff format src/ tests/ --check"
 typecheck = "mypy src/"
-test = "pytest tests/ -v"
-test-cov = "pytest tests/ -v --cov=src/knowledge_store --cov-report=term-missing --cov-report=xml"
+test = { cmd = "pytest tests/ -v", env = { PYTHONPATH = "src" } }
+test-cov = { cmd = "pytest tests/ -v --cov=src/knowledge_store --cov-report=term-missing --cov-report=xml", env = { PYTHONPATH = "src" } }
 security = "bandit -r src/ -c pyproject.toml"
 quality = { depends-on = ["lint", "typecheck", "test", "security"] }
 
@@ -117,7 +117,7 @@ quality = { depends-on = ["lint", "typecheck", "test", "security"] }
 pytest-xdist = ">=3.0"
 
 [tool.pixi.feature.quality-extended.tasks]
-test-extended = "pytest tests/ -v --cov=src/knowledge_store --cov-report=term-missing"
+test-extended = { cmd = "pytest tests/ -v --cov=src/knowledge_store --cov-report=term-missing", env = { PYTHONPATH = "src" } }
 quality-extended = { depends-on = ["quality", "test-extended"] }
 
 # -----------------------------------------------------------------------------
